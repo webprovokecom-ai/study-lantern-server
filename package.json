@@ -1,0 +1,27 @@
+{
+  "name": "study-lantern-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "setup": "node scripts/setup-stripe.js",
+    "start": "node server.js",
+    "webhooks": "stripe listen --forward-to localhost:4242/webhook",
+    "keys": "node scripts/make-keys.js",
+    "webhook:create": "node scripts/create-webhook.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^5.3.0",
+    "pg": "^8.23.1",
+    "stripe": "^23.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

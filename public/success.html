@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Study Lantern · Aktivér Student</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(600px 300px at 50% 0%,rgb(246 174 51 / .3),transparent 70%),#0B1024;color:#F4F1EA;font:16px/1.55 system-ui,"Segoe UI",sans-serif;padding:24px 16px}
+  .card{max-width:560px;width:100%;display:grid;gap:14px;text-align:center}
+  h1{font:800 34px/1.1 Georgia,serif;margin:0}
+  p{margin:0;color:#AEB4CC}
+  ol{text-align:left;margin:0;padding-left:22px;color:#F4F1EA;display:grid;gap:4px}
+  .code{font:600 12.5px/1.45 ui-monospace,Consolas,monospace;background:rgb(255 255 255 / .07);border:1px solid rgb(255 255 255 / .14);border-radius:12px;padding:12px;word-break:break-all;text-align:left;max-height:140px;overflow:auto;user-select:all}
+  .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  button,a.btn{font:inherit;font-weight:700;border:0;border-radius:11px;padding:11px 18px;background:#F6AE33;color:#1D1304;cursor:pointer;text-decoration:none}
+  a.ghost{background:transparent;color:#F4F1EA;border:1px solid rgb(255 255 255 / .2)}
+  [hidden]{display:none!important}
+  .spin{width:34px;height:34px;border-radius:50%;border:3px solid rgb(255 255 255 / .15);border-top-color:#F6AE33;margin:0 auto;animation:s 1s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="spin" id="spin"></div>
+  <h1 id="title">Et øjeblik…</h1>
+  <p id="text">Vi tjekker din betaling.</p>
+  <div id="got" hidden style="display:grid;gap:14px">
+    <ol>
+      <li>Kopiér koden herunder.</li>
+      <li>Gå tilbage til Study Lantern-fanen.</li>
+      <li>Tryk på <b>Student</b> øverst, indsæt koden og tryk <b>Aktivér</b>.</li>
+    </ol>
+    <div class="code" id="code"></div>
+    <div class="row"><button id="copy">Kopiér koden</button><a class="btn ghost" id="manage" href="#">Administrér abonnement</a></div>
+    <p id="until"></p>
+  </div>
+</div>
+<script>
+  const q = new URLSearchParams(location.search), $ = id => document.getElementById(id);
+  const done = (title, text) => { $("spin").hidden = true; $("title").textContent = title; $("text").textContent = text; };
+  async function load(tries = 0) {
+    if (q.has("none")) return done("Intet abonnement fundet", "Start Student fra Study Lantern for at oprette et abonnement.");
+    const url = q.get("session_id") ? "/api/activation?session_id=" + encodeURIComponent(q.get("session_id")) : "/api/activation?uid=" + encodeURIComponent(q.get("uid") || "");
+    try {
+      const r = await (await fetch(url)).json();
+      if (r.ready) {
+        done("Velkommen til Student!", "Din betaling er gennemført. Aktivér Student i Study Lantern med koden.");
+        $("got").hidden = false; $("code").textContent = r.code;
+        $("until").textContent = (r.cancelAtPeriodEnd ? "Dit abonnement stopper " : "Dit abonnement fornyes ") + new Date(r.until * 1000).toLocaleDateString("da-DK") + ".";
+        const uid = JSON.parse(atob(r.code.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).u;
+        $("manage").href = "/account?uid=" + encodeURIComponent(uid);
+      } else if (r.reason === "processing" && tries < 15) {
+        $("text").textContent = "Vi venter på, at banken bekræfter betalingen…"; setTimeout(() => load(tries + 1), 2000);
+      } else if (r.reason === "processing") {
+        done("Betalingen behandles stadig", "Det kan tage lidt tid med nogle betalingsmetoder. Prøv at genindlæse siden om et par minutter.");
+      } else {
+        done("Ingen aktiv Student-plan", "Betalingen er ikke gennemført. Gå tilbage til Study Lantern og prøv igen.");
+      }
+    } catch { done("Noget gik galt", "Vi kunne ikke tjekke betalingen. Genindlæs siden om lidt."); }
+  }
+  $("copy").onclick = async () => {
+    try { await navigator.clipboard.writeText($("code").textContent); $("copy").textContent = "Kopieret ✓"; }
+    catch { const r = document.createRange(); r.selectNodeContents($("code")); getSelection().removeAllRanges(); getSelection().addRange(r); $("copy").textContent = "Markeret: tryk Ctrl+C"; }
+  };
+  load();
+</script>
+</body>
+</html>
